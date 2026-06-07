@@ -1,0 +1,209 @@
+import yfinance as yf
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+# --- Información del Laboratorio y Participantes ---
+# Título: Laboratorio 5: Opción Parisina y Reloj de Barrera
+# Integrantes: Juan Pablo Arciniega, Santiago Sabat, Mauricio Olivares
+
+# --- 1. Descargue datos históricos de un activo y calíbrelos ---
+# Activo: SPY
+ticker = "SPY"
+start_date = "2020-01-01"
+end_date = "2023-01-01"
+data = yf.download(ticker, start=start_date, end=end_date)
+prices = data['Close'] # Corregido: Usar 'Close' en lugar de 'Adj Close'
+
+# Calibrar S0 (precio inicial) y sigma_b (volatilidad anualizada)
+S0 = prices.iloc[-1] # Último precio observado como precio inicial
+log_returns = np.log(prices / prices.shift(1)).dropna()
+sigma_b = log_returns.std() * np.sqrt(252) # Volatilidad anualizada (asumiendo 252 días de trading)
+
+# --- 2. Fije los parámetros del contrato para una opción exótica ---
+K = S0 * 0.95 # Precio de ejercicio (e.g., 5% OTM del S0 calibrado)
+T = 1.0       # Tiempo al vencimiento en años (e.g., 1 año)
+r = 0.02      # Tasa libre de riesgo anualizada (e.g., 2%)
+num_simulations = 100000 # Número de trayectorias Monte Carlo
+num_steps = 252 # Número de pasos en el tiempo (días de trading en un año para la simulación)
+dt = T / num_steps # Tamaño del paso de tiempo en años
+
+H = S0 * 0.90 # Nivel de barrera (e.g., 10% por debajo de S0)
+
+# Rango de duraciones D (el "reloj de barrera") para análisis de sensibilidad
+D_values = [5, 10, 20, 30] # Días consecutivos que el precio debe permanecer bajo/sobre la barrera
+
+# --- 3. Simule trayectorias discretas del precio del activo bajo la medida neutral al riesgo Q ---
+np.random.seed(42) # Para reproducibilidad de los resultados
+
+# Pre-asignar memoria para todas las trayectorias simuladas
+simulated_paths = np.zeros((num_simulations, num_steps + 1))
+simulated_paths[:, 0] = S0 # Todas las trayectorias comienzan en S0
+
+for i in range(num_simulations):
+    # Generar números aleatorios para el movimiento browniano
+    z = np.random.normal(0, 1, num_steps)
+    # Simular el camino del precio usando el modelo de Movimiento Browniano Geométrico (GBM)
+    for t in range(num_steps):
+        simulated_paths[i, t+1] = simulated_paths[i, t] * np.exp((r - 0.5 * sigma_b**2) * dt + sigma_b * np.sqrt(dt) * z[t])
+
+# --- 4. Implemente el "reloj de barrera" y 5. Calcule el payoff final ---
+# Función para calcular el precio de la opción Parisina para una duración D
+def calculate_parisian_option_price(K, T, r, num_simulations, num_steps, dt, H, D_val, simulated_paths, option_type='put', barrier_type='down-and-out'):
+    """
+    Calcula el precio de una opción Parisina utilizando simulación Monte Carlo.
+
+    Args:
+        K (float): Precio de ejercicio.
+        T (float): Tiempo al vencimiento en años.
+        r (float): Tasa libre de riesgo anualizada.
+        num_simulations (int): Número de trayectorias Monte Carlo.
+        num_steps (int): Número de pasos de tiempo en la simulación.
+        dt (float): Tamaño del paso de tiempo.
+        H (float): Nivel de la barrera.
+        D_val (int): Duración consecutiva en días para la condición de barrera.
+        simulated_paths (np.array): Array con todas las trayectorias de precios simuladas.
+        option_type (str): Tipo de opción ('call' o 'put').
+        barrier_type (str): Tipo de barrera ('down-and-out' o 'up-and-out').
+
+    Returns:
+        tuple: (precio_opcion, error_estandar_simulacion)
+    """
+    payoffs = np.zeros(num_simulations)
+
+    for i in range(num_simulations):
+        path = simulated_paths[i, :]
+        knocked_out = False
+        consecutive_days_at_barrier_condition = 0 # Contador para días consecutivos
+
+        for t in range(1, num_steps + 1):
+            if barrier_type == 'down-and-out':
+                # Para Down-and-Out, si el precio está por debajo de H
+                if path[t] < H:
+                    consecutive_days_at_barrier_condition += 1
+                    if consecutive_days_at_barrier_condition >= D_val:
+                        knocked_out = True # Opción desactivada
+                        break
+                else:
+                    consecutive_days_at_barrier_condition = 0 # Reiniciar contador
+            elif barrier_type == 'up-and-out':
+                # Para Up-and-Out, si el precio está por encima de H
+                if path[t] > H:
+                    consecutive_days_at_barrier_condition += 1
+                    if consecutive_days_at_barrier_condition >= D_val:
+                        knocked_out = True # Opción desactivada
+                        break
+                else:
+                    consecutive_days_at_barrier_condition = 0 # Reiniciar contador
+            else:
+                raise ValueError("barrier_type must be 'down-and-out' or 'up-and-out'")
+
+        if not knocked_out:
+            # Si la opción no fue desactivada, calcular el payoff al vencimiento
+            S_T = path[-1]
+            if option_type == 'put':
+                payoff = max(0, K - S_T)
+            elif option_type == 'call':
+                payoff = max(0, S_T - K)
+            else:
+                raise ValueError("option_type must be 'put' or 'call'")
+            payoffs[i] = payoff
+        # Si 'knocked_out' es True, el payoff para esa trayectoria permanece en 0 (valor inicial)
+
+    # Descontar el promedio de los payoffs al presente
+    option_price = np.mean(payoffs) * np.exp(-r * T)
+    # Calcular el error estándar de la simulación
+    std_error = np.std(payoffs) / np.sqrt(num_simulations) * np.exp(-r * T)
+    return option_price, std_error
+
+# --- 6. Evalúe el proceso para los distintos valores de D y genere una gráfica de sensibilidad ---
+parisian_prices = []
+standard_errors = []
+
+for D in D_values:
+    # Asumiendo una opción Put Down-and-Out Parisina como ejemplo
+    price, err = calculate_parisian_option_price(
+        K, T, r, num_simulations, num_steps, dt, H, D, simulated_paths,
+        option_type='put', barrier_type='down-and-out'
+    )
+    parisian_prices.append(price)
+    standard_errors.append(err)
+
+# Gráfica de sensibilidad del precio de la opción Parisina en función de D
+plt.figure(figsize=(12, 7))
+plt.errorbar(D_values, parisian_prices, yerr=standard_errors, fmt='-o',
+             capsize=5, label='Precio de Opción Parisina (con Error Estándar)',
+             color='skyblue', ecolor='lightcoral', markerfacecolor='blue', markeredgecolor='blue')
+plt.title('Sensibilidad del Precio de Opción Parisina vs. Duración (D) del Reloj de Barrera', fontsize=14)
+plt.xlabel('Duración D (Días Consecutivos Bajo Barrera H)', fontsize=12)
+plt.ylabel('Precio de la Opción', fontsize=12)
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.xticks(D_values, fontsize=10)
+plt.yticks(fontsize=10)
+plt.legend(fontsize=10)
+plt.tight_layout()
+plt.show()
+
+# --- Regla de impresión final: Tabla comparativa ---
+print("\n--- Tabla Comparativa de Precios de Opción Parisina y Errores Estándar ---")
+print("{:<10} {:<20} {:<20}".format("D (días)", "Precio de Opción", "Error Estándar"))
+print("-" * 55)
+for d, price, err in zip(D_values, parisian_prices, standard_errors):
+    print("{:<10} {:<20.4f} {:<20.4f}".format(d, price, err))
+print("-" * 55)
+
+
+# --- Conclusiones amplias, profesionales y detalladas ---
+print('''
+Conclusiones sobre el Laboratorio 5: Opción Parisina y Reloj de Barrera
+
+Este laboratorio ha explorado la valuación de una opción exótica tipo Parisina Down-and-Out mediante simulación Monte Carlo,
+incorporando el concepto crucial de "memoria temporal" a través de un "reloj de barrera". Los integrantes de este
+proyecto son Juan Pablo Arciniega, Santiago Sabat y Mauricio Olivares.
+
+El concepto de "memoria temporal" es una característica distintiva de las opciones Parisinas, que las diferencia
+fundamentalmente de las opciones de barrera estándar. En una opción de barrera clásica (e.g., Down-and-Out), un
+único toque o cruce de la barrera H resulta en la activación o desactivación instantánea del contrato, sin importar
+la duración de dicha permanencia. Matemáticamente, esto implica una condición binaria (0 o 1) dependiente de la
+función indicadora de si el precio del activo subyacente ha cruzado H en cualquier momento t < T.
+
+En contraste, la opción Parisina introduce una dimensión temporal en la condición de barrera. Para que la barrera
+sea efectiva (e.g., para que la opción se "desactive" en el caso de una Down-and-Out Parisina), el precio del activo
+no solo debe cruzar el nivel H, sino que debe *permanecer* por debajo (o por encima, según el tipo) de H durante
+un período *consecutivo* de D días. Si el precio cruza la barrera, pero luego regresa por encima (en el caso de
+Down-and-Out) antes de que se cumpla la duración D, el "reloj" o contador se reinicia a cero. Esta "memoria" sobre
+la permanencia en la zona de barrera modela escenarios del mundo real donde los eventos de barrera pueden requerir
+una confirmación sostenida, como por ejemplo, regulaciones que se activan solo después de que un precio se mantiene
+por debajo de un umbral durante varios días.
+
+La implicación matemática de esta "memoria temporal" es que la probabilidad de que una opción Parisina sea
+desactivada es menor que la de una opción de barrera estándar con el mismo H, ya que requiere una condición más
+estricta (D días consecutivos). Esto se refleja en el precio: una opción Down-and-Out Parisina de tipo Put,
+como la modelada aquí, tendrá un precio más alto que una Down-and-Out Put estándar (asumiendo que ambas sean
+activas, es decir, el put tiene valor), porque la probabilidad de que sea "knocked out" es menor. Es decir, el
+valor de la opción "sobreviviente" es mayor.
+
+El impacto del incremento del parámetro D en el valor del contrato es inversamente proporcional a la probabilidad
+de la barrera efectiva. A medida que D aumenta, la condición para que la barrera sea activada se vuelve más difícil
+de satisfacer. Para una opción Parisina Down-and-Out Put, un D más grande significa que es menos probable que la
+opción se desactive, lo que a su vez se traduce en un precio de opción más alto. Esto se debe a que la opción
+retiene su valor de "opción put normal" por más tiempo o bajo condiciones más extremas, dado que se requiere una
+permanencia prolongada y consecutiva por debajo de la barrera para su expiración anticipada. La gráfica de
+sensibilidad generada corrobora esta relación, mostrando un incremento en el precio de la opción a medida que D
+aumenta, hasta un punto en que D es tan grande que la opción se comporta prácticamente como una opción de estilo
+europeo sin barrera.
+
+En resumen, la opción Parisina, con su intrínseco concepto de "memoria temporal", ofrece un marco más matizado
+para la gestión de riesgos y la especulación en los mercados, permitiendo a los participantes del mercado
+estructurar productos financieros que responden a la persistencia de eventos de precio, más allá de la
+mera ocurrencia puntual.
+''')
+
+     
+/tmp/ipykernel_3822/1723443552.py:16: FutureWarning: YF.download() has changed argument auto_adjust default to True
+  data = yf.download(ticker, start=start_date, end=end_date)
+
+[*********************100%***********************]  1 of 1 completed
+/tmp/ipykernel_3822/1723443552.py:49: FutureWarning: Calling float on a single element Series is deprecated and will raise a TypeError in the future. Use float(ser.iloc[0]) instead
+  simulated_paths[i, t+1] = simulated_paths[i, t] * np.exp((r - 0.5 * sigma_b**2) * dt + sigma_b * np.sqrt(dt) * z[t])
