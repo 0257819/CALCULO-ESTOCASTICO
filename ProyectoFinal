@@ -1,0 +1,489 @@
+% ============================================================
+% PROYECTO 9: FACTORES Y ESTILOS DE INVERSIÓN — APPLE (AAPL)
+% CAPM vs. Fama-French 3 Factores | 2019-2024
+% ============================================================
+\documentclass[12pt, letterpaper]{article}
+
+% ── Paquetes ─────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{siunitx}
+
+% ── Colores ──────────────────────────────────────────────────
+\definecolor{navy}{HTML}{1C3557}
+\definecolor{blue}{HTML}{2E75B6}
+\definecolor{lblue}{HTML}{D6E4F0}
+\definecolor{lgray}{HTML}{F2F2F2}
+\definecolor{lgreen}{HTML}{E2EFDA}
+\definecolor{lyellow}{HTML}{FFF2CC}
+\definecolor{red}{HTML}{C00000}
+
+% ── Formato de secciones ─────────────────────────────────────
+\titleformat{\section}
+  {\color{navy}\Large\bfseries}{{\thesection.}}{0.5em}{}[\color{navy}\titlerule]
+\titleformat{\subsection}
+  {\color{blue}\large\bfseries}{{\thesubsection}}{0.5em}{}
+\titlespacing{\section}{0pt}{18pt}{8pt}
+\titlespacing{\subsection}{0pt}{12pt}{6pt}
+
+% ── Encabezado y pie ─────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{blue} Proyecto Final: Cálculo Estocástico}
+\fancyhead[R]{\small\color{blue} Apple Inc. (AAPL) 2019--2024}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{blue}\leaders\hrule height\headrulewidth\hfill}}
+
+% ── Hipervínculos ─────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true, linkcolor=navy, citecolor=blue,
+  urlcolor=blue, pdftitle={Factores y Estilos de Inversion - AAPL}
+}
+
+% ── Cuadro resaltado ─────────────────────────────────────────
+\tcbuselibrary{skins}
+\newtcolorbox{callout}{
+  enhanced, colback=lblue, colframe=navy,
+  boxrule=0.5pt, leftrule=4pt,
+  arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fontupper=\itshape\color{navy}
+}
+
+% ── Columnas de tabla ─────────────────────────────────────────
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% ── Espaciado ────────────────────────────────────────────────
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+\onehalfspacing
+
+% ============================================================
+\begin{document}
+
+% ── PORTADA ──────────────────────────────────────────────────
+\begin{titlepage}
+  \vspace*{3cm}
+  \begin{center}
+    {\color{navy}\rule{\linewidth}{2pt}}\\[0.5cm]
+    {\LARGE\bfseries\color{navy} Cálculo Estocástico}\\[0.3cm]
+    {\large\color{blue} Proyecto Final: Cálculo Estocástico}\\[0.2cm]
+    {\color{navy}\rule{\linewidth}{0.5pt}}\\[1cm]
+    {\Large\bfseries Apple Inc. (AAPL)}\\[0.3cm]
+    {\large CAPM Puro vs.\ Fama--French de Tres Factores}\\[0.2cm]
+    {\large Febrero 2019 -- Diciembre 2024}\\[2cm]
+    % ── Completa tus datos aquí ──────────────────────────────
+    {\large\textbf{Nombre:}} \underline{\hspace{6cm}}\\[0.5cm]
+    {\large\textbf{Matrícula:}} \underline{\hspace{5cm}}\\[0.5cm]
+    {\large\textbf{Materia:}} \underline{\hspace{5.5cm}}\\[0.5cm]
+    {\large\textbf{Profesor:}} \underline{\hspace{5.5cm}}\\[0.5cm]
+    {\large\textbf{Fecha:}} \underline{\hspace{6cm}}\\[2cm]
+    % ─────────────────────────────────────────────────────────
+    {\color{navy}\rule{\linewidth}{2pt}}
+  \end{center}
+\end{titlepage}
+
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Introducción}
+
+La teoría financiera moderna busca responder una pregunta fundamental: ¿qué determina el retorno esperado de un activo? Durante décadas, el \textit{Capital Asset Pricing Model} (CAPM) fue la respuesta dominante, proponiendo que el único factor de riesgo sistemático compensado por el mercado es la exposición al portafolio de mercado. Sin embargo, la evidencia empírica acumulada mostró que el CAPM deja sin explicar patrones sistemáticos en los retornos, como la prima de las empresas pequeñas o las empresas de valor.
+
+El presente trabajo analiza \textbf{Apple Inc.\ (AAPL)} bajo dos modelos de factores: el CAPM puro y el modelo de tres factores de Fama y French (1993). El propósito no es desarrollar toda la teoría de factores, sino mostrar que el comportamiento de AAPL puede leerse como una combinación de exposiciones sistemáticas identificables y cuantificables.
+
+La \textbf{pregunta central} que guía este análisis es: ¿puede describirse el comportamiento de AAPL mediante exposiciones a estilos o factores empíricos? La respuesta, como se verá, es afirmativa.
+
+% ============================================================
+\section{Marco Teórico}
+
+\subsection{El CAPM — Capital Asset Pricing Model}
+
+Desarrollado independientemente por \citeauthor{} Sharpe (1964), Lintner (1965) y Mossin (1966), el CAPM establece que el retorno esperado de cualquier activo es función lineal de su covarianza con el portafolio de mercado:
+
+\begin{equation}
+  E(R_i) = R_f + \beta_i \cdot \left[E(R_m) - R_f\right]
+  \label{eq:capm}
+\end{equation}
+
+donde $\beta_i$ mide la sensibilidad del activo $i$ al exceso de retorno del mercado $(R_m - R_f)$. Un $\beta > 1$ implica que el activo amplifica los movimientos del mercado; $\beta < 1$, que los amortigua. El \textbf{alfa} ($\alpha$), término independiente en la regresión, captura el retorno no explicado por el factor de mercado; en equilibrio debería ser cero.
+
+La forma estimable del CAPM es:
+
+\begin{equation}
+  R_i - R_f = \alpha + \beta \cdot (R_m - R_f) + \varepsilon_i
+  \label{eq:capm_reg}
+\end{equation}
+
+La fortaleza del CAPM es su parsimonia: un solo factor resume toda la prima de riesgo de un activo. Su debilidad es que ignora dimensiones de riesgo que el mercado también compensa, como el tamaño y el valor contable relativo.
+
+\subsection{El Modelo de Fama-French de Tres Factores}
+
+Fama y French (1992, 1993) documentaron que dos variables ---el tamaño de la empresa y la razón valor en libros a valor de mercado (B/M)--- tienen poder predictivo sobre los retornos que el CAPM no captura. Su modelo de tres factores extiende el CAPM:
+
+\begin{equation}
+  R_i - R_f = \alpha + b_1 \cdot (Mkt\text{-}RF) + b_2 \cdot SMB + b_3 \cdot HML + \varepsilon_i
+  \label{eq:ff3}
+\end{equation}
+
+El factor \textbf{SMB} (\textit{Small Minus Big}) representa la diferencia de retorno entre una cartera de empresas pequeñas y una de empresas grandes. Una carga positiva indica comportamiento similar al de small-caps; negativa, al de large-caps.
+
+El factor \textbf{HML} (\textit{High Minus Low}) representa la diferencia entre carteras de alto y bajo B/M. Una carga positiva indica sesgo hacia acciones de valor (\textit{value}); negativa, hacia acciones de crecimiento (\textit{growth}). Apple, con múltiplos precio/libro históricamente elevados, debería mostrar una carga negativa en HML.
+
+% ============================================================
+\section{Datos y Metodología}
+
+\subsection{Activo analizado y periodo}
+
+Se analiza \textbf{Apple Inc.\ (AAPL)}, listada en el NASDAQ y la empresa de mayor capitalización de mercado del mundo (aproximadamente \$3 billones de dólares a finales de 2024). El periodo de análisis comprende \textbf{febrero de 2019 a diciembre de 2024}, con \textbf{71 observaciones mensuales}. Este horizonte incluye: el mercado alcista de 2019--2021, el \textit{crash} de COVID-19 (febrero--marzo 2020), la recuperación acelerada (2020--2021), el ciclo de alza de tasas de la Fed (2022) y la normalización posterior (2023--2024).
+
+\subsection{Variables y fuentes}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Retorno mensual de AAPL:} calculado como retorno simple sobre el precio de cierre ajustado por dividendos y splits. Fuente: Yahoo Finance \cite{yahoo2024}.
+  \item \textbf{Factores Fama-French (Mkt-RF, SMB, HML) y tasa libre de riesgo (RF):} obtenidos de la Kenneth French Data Library \cite{french2024}, expresados en porcentaje mensual.
+  \item \textbf{Variable dependiente:} exceso de retorno de AAPL sobre la tasa libre de riesgo (AAPL $-$ RF).
+\end{itemize}
+
+\subsection{Especificación econométrica}
+
+Ambos modelos se estiman por Mínimos Cuadrados Ordinarios (OLS). Dado que los retornos financieros pueden presentar heterocedasticidad condicional, se utilizan \textbf{errores estándar robustos tipo HC3} (White, 1980) en ambas regresiones. Los diagnósticos incluyen:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Normalidad de residuos:} prueba de Jarque-Bera.
+  \item \textbf{Autocorrelación serial:} estadístico de Durbin-Watson.
+  \item \textbf{Test F incremental:} para determinar si SMB y HML aportan poder explicativo significativo sobre el CAPM.
+\end{itemize}
+
+% ============================================================
+\section{Estadísticas Descriptivas}
+
+La Tabla \ref{tab:descriptivas} resume las estadísticas principales de AAPL y los tres factores para el periodo 2019--2024. AAPL presentó un retorno mensual promedio de 2.21\%, muy superior al del mercado (1.46\%), lo que ya anticipa una beta mayor a la unidad.
+
+\begin{table}[H]
+  \centering
+  \caption{Estadísticas descriptivas --- Retornos mensuales (\%)}
+  \label{tab:descriptivas}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    \rowcolor{navy}
+    \textcolor{white}{\textbf{Variable}} &
+    \textcolor{white}{\textbf{Media (\%)}} &
+    \textcolor{white}{\textbf{Desv.\ Est.}} &
+    \textcolor{white}{\textbf{Mín.\ (\%)}} &
+    \textcolor{white}{\textbf{Máx.\ (\%)}} &
+    \textcolor{white}{\textbf{Sharpe}} \\
+    \midrule
+    \rowcolor{lgray} AAPL   & 2.210  & 8.398 & $-$14.71 & 21.35 & 0.263 \\
+    Mkt-RF                  & 1.464  & 5.230 & $-$13.37 & 13.66 & 0.280 \\
+    \rowcolor{lgray} SMB    & $-$0.291 & 2.721 & $-$7.10 & 7.47  & ---   \\
+    HML                     & 0.075  & 3.836 & $-$9.89  & 9.81  & ---   \\
+    \rowcolor{lgray} RF     & 0.202  & 0.175 & 0.01     & 0.47  & ---   \\
+    \bottomrule
+  \end{tabular}
+  \vspace{4pt}\\
+  \footnotesize\textit{Nota: Sharpe calculado como media/desviación estándar mensual.
+  Fuentes: Yahoo Finance y Kenneth French Data Library.}
+\end{table}
+
+El factor SMB muestra una media ligeramente negativa ($-$0.29\%), consistente con el periodo de dominio de las large-caps tecnológicas. La correlación de AAPL con el mercado es de 0.869, anticipando ya una beta elevada.
+
+% ============================================================
+\section{Resultados --- Modelo CAPM}
+
+La regresión del CAPM sobre los 71 meses del periodo produce:
+
+\begin{equation}
+  \widehat{AAPL}_{exc} = \underset{(0.0051)}{0.0003} + \underset{(0.0950)}{1.4192} \cdot (Mkt\text{-}RF) + \hat{\varepsilon}
+  \qquad R^2 = 76.4\%
+\end{equation}
+
+\begin{table}[H]
+  \centering
+  \caption{Resultados del modelo CAPM}
+  \label{tab:capm}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{lrrrrc}
+    \toprule
+    \rowcolor{navy}
+    \textcolor{white}{\textbf{Coeficiente}} &
+    \textcolor{white}{\textbf{Estimado}} &
+    \textcolor{white}{\textbf{Error Std.}} &
+    \textcolor{white}{\textbf{$t$-stat}} &
+    \textcolor{white}{\textbf{$p$-valor}} &
+    \textcolor{white}{\textbf{Sig.}} \\
+    \midrule
+    \rowcolor{lgray}
+    $\alpha$ (Alfa)        & 0.0003  & 0.0051 & 0.0592  & 0.9530 & \\
+    $\beta$ (Beta mercado) & 1.4192  & 0.0950 & 14.9378 & 0.0000 & \textcolor{red}{***} \\
+    \midrule
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{$R^2$} & \multicolumn{4}{r}{0.7638} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{$R^2$ Ajustado} & \multicolumn{4}{r}{0.7565} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{$F$-estadístico} & \multicolumn{4}{r}{223.14 \quad ($p \approx 0.000$)} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{AIC} & \multicolumn{4}{r}{$-$450.40} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{BIC} & \multicolumn{4}{r}{$-$445.88} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{Observaciones} & \multicolumn{4}{r}{71} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{4pt}\\
+  \footnotesize\textit{Nota: Errores estándar robustos HC3. Significancia: *** $p<0.01$,
+  ** $p<0.05$, * $p<0.10$.}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Intervalos de confianza 95\% --- CAPM}
+  \label{tab:ic_capm}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{lrrrr}
+    \toprule
+    \rowcolor{navy}
+    \textcolor{white}{\textbf{Coeficiente}} &
+    \textcolor{white}{\textbf{Estimado}} &
+    \textcolor{white}{\textbf{LI 95\%}} &
+    \textcolor{white}{\textbf{LS 95\%}} &
+    \textcolor{white}{\textbf{Amplitud}} \\
+    \midrule
+    \rowcolor{lgray}
+    $\alpha$ (Alfa)        & 0.0003  & $-$0.0098 & 0.0104 & 0.0201 \\
+    $\beta$ (Beta mercado) & 1.4192  & 1.2310    & 1.6075 & 0.3765 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Interpretación}
+
+\textbf{Beta ($\beta = 1.4192$, $p<0.01$):} el coeficiente de mercado es altamente significativo y mayor que la unidad. Por cada 1\% de retorno del mercado, AAPL rinde aproximadamente 1.42\% adicional sobre la tasa libre de riesgo. Esto es consistente con la naturaleza del sector tecnológico, caracterizado por flujos de caja lejanos en el tiempo y mayor sensibilidad a variaciones en las tasas de descuento.
+
+\textbf{Alfa ($\alpha = 0.0003\%$, $p = 0.953$):} estadísticamente no significativo. No existe evidencia de retorno anormal sistemático de AAPL una vez descontado el riesgo de mercado, consistente con la hipótesis de mercados eficientes en su forma semifuerte.
+
+\textbf{$R^2 = 76.4\%$:} el factor de mercado explica por sí solo el 76.4\% de la varianza mensual de AAPL. El 23.6\% restante podría estar capturado por factores adicionales.
+
+% ============================================================
+\section{Resultados --- Modelo Fama-French de Tres Factores}
+
+Al incorporar los factores SMB y HML, la ecuación estimada es:
+
+\begin{equation}
+  \widehat{AAPL}_{exc} =
+  \underset{(0.0049)}{-0.0004} +
+  \underset{(0.0952)}{1.4594} \cdot (Mkt\text{-}RF)
+  \underset{(0.0023)}{-0.0022} \cdot SMB
+  \underset{(0.0015)}{-0.0029} \cdot HML + \hat{\varepsilon}
+  \quad R^2 = 78.2\%
+\end{equation}
+
+\begin{table}[H]
+  \centering
+  \caption{Resultados del modelo Fama-French de tres factores}
+  \label{tab:ff3}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{lrrrrc}
+    \toprule
+    \rowcolor{navy}
+    \textcolor{white}{\textbf{Coeficiente}} &
+    \textcolor{white}{\textbf{Estimado}} &
+    \textcolor{white}{\textbf{Error Std.}} &
+    \textcolor{white}{\textbf{$t$-stat}} &
+    \textcolor{white}{\textbf{$p$-valor}} &
+    \textcolor{white}{\textbf{Sig.}} \\
+    \midrule
+    \rowcolor{lgray}
+    $\alpha$ (Alfa)             & $-$0.0004 & 0.0049 & $-$0.1650 & 0.8690 & \\
+    $b_1$ (Beta mercado)        &    1.4594 & 0.0952 &   12.6730 & 0.0000 & \textcolor{red}{***} \\
+    \rowcolor{lgray}
+    $b_2$ (SMB --- Tamaño)      & $-$0.0022 & 0.0023 & $-$0.4980 & 0.6187 & \\
+    $b_3$ (HML --- Valor)       & $-$0.0029 & 0.0015 & $-$1.8650 & 0.0622 & \textcolor{red}{*} \\
+    \midrule
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{$R^2$} & \multicolumn{4}{r}{0.7815} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{$R^2$ Ajustado} & \multicolumn{4}{r}{0.7878} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{$F$-estadístico} & \multicolumn{4}{r}{87.60 \quad ($p \approx 0.000$)} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{AIC} & \multicolumn{4}{r}{$-$457.10} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{BIC} & \multicolumn{4}{r}{$-$448.05} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{Test $F$ incremental (SMB+HML)} & \multicolumn{4}{r}{$F=4.155$, $p=0.0198$ \checkmark} \\
+    \rowcolor{lblue}
+    \multicolumn{2}{l}{Observaciones} & \multicolumn{4}{r}{71} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{4pt}\\
+  \footnotesize\textit{Nota: Errores estándar robustos HC3. Significancia: *** $p<0.01$,
+  ** $p<0.05$, * $p<0.10$.}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Intervalos de confianza 95\% --- Fama-French 3F}
+  \label{tab:ic_ff3}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{lrrrr}
+    \toprule
+    \rowcolor{navy}
+    \textcolor{white}{\textbf{Coeficiente}} &
+    \textcolor{white}{\textbf{Estimado}} &
+    \textcolor{white}{\textbf{LI 95\%}} &
+    \textcolor{white}{\textbf{LS 95\%}} &
+    \textcolor{white}{\textbf{Amplitud}} \\
+    \midrule
+    \rowcolor{lgray}
+    $\alpha$ (Alfa)        & $-$0.0004 & $-$1.1015 & 0.8575 & 1.8726 \\
+    $b_1$ (Beta mercado)   &    1.4594 &    1.1961 & 1.6338 & 0.4377 \\
+    \rowcolor{lgray}
+    $b_2$ (SMB)            & $-$0.0022 & $-$0.6433 & 0.3827 & 1.0260 \\
+    $b_3$ (HML)            & $-$0.0029 & $-$0.6077 & 0.0151 & 0.6228 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Interpretación de coeficientes}
+
+\textbf{Factor mercado $b_1 = 1.4594$ ($p<0.01$):} se mantiene la alta sensibilidad al mercado, ligeramente mayor que en el CAPM. El factor de mercado sigue siendo la fuente dominante de variación en el retorno de AAPL.
+
+\textbf{Factor tamaño $b_2 = -0.0022$ ($p = 0.619$):} carga negativa en SMB, indicando comportamiento de large-cap. No significativo al 5\%, lo cual es esperable dado que Apple es la empresa de mayor capitalización del mundo.
+
+\textbf{Factor valor $b_3 = -0.0029$ ($p = 0.062$):} carga negativa en HML, marginalmente significativa. Indica perfil \textit{growth}: Apple cotiza a múltiplos P/B elevados, consistente con una empresa cuyo valor reside en activos intangibles y expectativas de flujos futuros.
+
+\textbf{Alfa $\alpha = -0.0004\%$ ($p = 0.869$):} no significativo. Los tres factores explican bien el retorno de AAPL sin retornos anormales estadísticamente robustos.
+
+% ============================================================
+\section{Comparación de Modelos}
+
+\begin{table}[H]
+  \centering
+  \caption{Comparación completa --- CAPM vs.\ Fama-French 3F}
+  \label{tab:comparacion}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{L{5.5cm} C{2.5cm} C{2.5cm} C{3cm}}
+    \toprule
+    \rowcolor{navy}
+    \textcolor{white}{\textbf{Métrica / Parámetro}} &
+    \textcolor{white}{\textbf{CAPM}} &
+    \textcolor{white}{\textbf{FF3}} &
+    \textcolor{white}{\textbf{$\Delta$ / Nota}} \\
+    \midrule
+    \rowcolor{blue}
+    \multicolumn{4}{l}{\textcolor{white}{\textbf{COEFICIENTES}}} \\
+    \rowcolor{lgray}
+    $\alpha$ Alfa (\% mensual) & 0.0003 & $-$0.0004 & Ambos no sig. \\
+    $\beta/b_1$ Beta mercado   & 1.4192*** & 1.4594*** & +0.040 \\
+    \rowcolor{lgray}
+    $b_2$ SMB (tamaño)         & --- & $-$0.0022 & Large-cap \\
+    $b_3$ HML (valor)          & --- & $-$0.0029* & Growth \\
+    \midrule
+    \rowcolor{blue}
+    \multicolumn{4}{l}{\textcolor{white}{\textbf{BONDAD DE AJUSTE}}} \\
+    \rowcolor{lgray}
+    $R^2$                      & 76.38\% & 78.15\% & +1.77 pp \\
+    $R^2$ Ajustado             & 75.65\% & 78.78\% & +3.13 pp \\
+    \rowcolor{lgray}
+    AIC (menor = mejor)        & $-$450.40 & $-$457.10 & FF3 mejor \\
+    BIC (menor = mejor)        & $-$445.88 & $-$448.05 & FF3 mejor \\
+    \midrule
+    \rowcolor{blue}
+    \multicolumn{4}{l}{\textcolor{white}{\textbf{DIAGNÓSTICOS}}} \\
+    \rowcolor{lgray}
+    Jarque-Bera ($p$-valor)    & 0.3708 \checkmark & 0.6650 \checkmark & Normales en ambos \\
+    Durbin-Watson              & 1.7315 \checkmark & 1.7982 \checkmark & Sin autocorr. \\
+    \midrule
+    \rowcolor{blue}
+    \multicolumn{4}{l}{\textcolor{white}{\textbf{TEST F INCREMENTAL}}} \\
+    \rowcolor{lgray}
+    $H_0: b_2 = b_3 = 0$      & --- & $F(2,67) = 4.155$ & $p = 0.0198$ \checkmark \\
+    \bottomrule
+  \end{tabular}
+  \vspace{4pt}\\
+  \footnotesize\textit{Nota: \checkmark indica ausencia de problemas al nivel convencional.
+  pp = puntos porcentuales. Significancia: *** $p<0.01$, * $p<0.10$.}
+\end{table}
+
+\subsection{Poder explicativo}
+
+El $R^2$ mejora de 76.4\% (CAPM) a 78.2\% (FF3), una ganancia de 1.77 puntos porcentuales. El test $F$ incremental formaliza si esta mejora es estadísticamente significativa:
+
+\begin{equation}
+  F(2,\,67) = \frac{(R^2_{FF3} - R^2_{CAPM})/2}{(1 - R^2_{FF3})/67} = 4.155 \qquad p\text{-valor} = 0.0198
+\end{equation}
+
+Al 5\% de significancia se rechaza $H_0$. Los factores SMB y HML, conjuntamente, aportan información estadísticamente significativa sobre los retornos de AAPL más allá del factor de mercado.
+
+\subsection{Criterios de información}
+
+Tanto el AIC ($-457.10$ vs $-450.40$) como el BIC ($-448.05$ vs $-445.88$) favorecen al modelo FF3, indicando que los factores adicionales mejoran el ajuste incluso penalizando por el mayor número de parámetros.
+
+% ============================================================
+\section{Perfil de Inversión de Apple (AAPL)}
+
+Los resultados del modelo FF3 permiten construir el siguiente perfil sistemático de AAPL:
+
+\begin{callout}
+  Apple Inc.\ es un activo de \textbf{alta sensibilidad al mercado} ($\beta \approx 1.46$), con perfil \textbf{large-cap} ($b_2 < 0$) y orientación \textbf{growth} ($b_3 < 0$). El alfa no es significativo en ningún modelo, indicando que el retorno de AAPL puede explicarse en su mayor parte por exposiciones sistemáticas a factores de riesgo, sin retornos anormales estadísticamente robustos.
+\end{callout}
+
+Este perfil es económicamente coherente. Apple cotiza a múltiplos P/E de 25--35x, característicos de acciones \textit{growth} cuyo valor reside en expectativas de flujos futuros, no en activos tangibles. Su capitalización superior a \$3 billones la hace dominante en cualquier índice, explicando la carga negativa en SMB. Su $\beta > 1$ refleja la naturaleza cíclica y sensible a tasas del sector tecnológico.
+
+% ============================================================
+\section{Conclusiones}
+
+Este trabajo analiza Apple Inc.\ con 71 observaciones mensuales (febrero 2019 -- diciembre 2024) bajo el CAPM y el modelo Fama-French de tres factores. Las principales conclusiones son:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item El comportamiento de AAPL puede describirse satisfactoriamente mediante exposiciones a factores sistemáticos. El modelo FF3 explica el 78.2\% de la varianza mensual.
+  \item El factor de mercado es la exposición dominante ($b_1 \approx 1.46$, $p<0.01$). AAPL amplifica consistentemente los movimientos del mercado.
+  \item El perfil factorial ---large-cap, \textit{growth}, alta beta--- es coherente con su posición como empresa tecnológica de mega-capitalización.
+  \item El modelo FF3 mejora al CAPM en $R^2$ (+1.77 pp), AIC y BIC. El test $F$ incremental confirma que la mejora es significativa ($p = 0.020$).
+  \item El alfa no es significativo en ningún modelo, consistente con la hipótesis de mercados eficientes.
+\end{enumerate}
+
+\textit{Limitaciones:} el análisis es lineal y no captura momentum ni factores de rentabilidad (FF5, 2015). El periodo incluye el shock atípico de COVID-19. Los factores FF3 se construyen para el mercado estadounidense sin ajuste sectorial específico.
+
+% ============================================================
+\section*{Bibliografía}
+\addcontentsline{toc}{section}{Bibliografía}
+
+\begin{enumerate}[leftmargin=1.5cm, label={[\arabic*]}]
+  \item Fama, E.\ F., \& French, K.\ R.\ (1992). The cross-section of expected stock returns. \textit{The Journal of Finance}, 47(2), 427--465.
+  \item Fama, E.\ F., \& French, K.\ R.\ (1993). Common risk factors in the returns on stocks and bonds. \textit{Journal of Financial Economics}, 33(1), 3--56. \url{https://doi.org/10.1016/0304-405X(93)90023-5}
+  \item Fama, E.\ F., \& French, K.\ R.\ (2015). A five-factor asset pricing model. \textit{Journal of Financial Economics}, 116(1), 1--22.
+  \item French, K.\ R.\ (2024). \textit{Data Library}. Tuck School of Business at Dartmouth. \url{https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html}
+  \item Lintner, J.\ (1965). The valuation of risk assets and the selection of risky investments in stock portfolios and capital budgets. \textit{The Review of Economics and Statistics}, 47(1), 13--37.
+  \item Sharpe, W.\ F.\ (1964). Capital asset prices: A theory of market equilibrium under conditions of risk. \textit{The Journal of Finance}, 19(3), 425--442.
+  \item White, H.\ (1980). A heteroskedasticity-consistent covariance matrix estimator and a direct test for heteroskedasticity. \textit{Econometrica}, 48(4), 817--838.
+  \item Yahoo Finance.\ (2024). \textit{Apple Inc.\ (AAPL) historical data}. \url{https://finance.yahoo.com/quote/AAPL/history/}
+\end{enumerate}
+
+\end{document}
